@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>最前面QR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #E9EDF2;
+    --surface: #FFFFFF;
+    --ink: #151A22;
+    --muted: #5F6875;
+    --line: #CFD6DF;
+    --accent: #2743E6;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #DFE4FF;
+    --danger: #B3261E;
+    --stage: #D9DFE7;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #11141A; --surface: #1A1F28; --ink: #E9EDF3; --muted: #98A2B0;
+      --line: #2E3542; --accent: #8EA0FF; --accent-ink: #0D1230; --accent-soft: #262E57;
+      --danger: #FF8A80; --stage: #0B0D12;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #11141A; --surface: #1A1F28; --ink: #E9EDF3; --muted: #98A2B0;
+    --line: #2E3542; --accent: #8EA0FF; --accent-ink: #0D1230; --accent-soft: #262E57;
+    --danger: #FF8A80; --stage: #0B0D12;
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", Meiryo, system-ui, sans-serif;
+    font-weight: 500; font-size: 1rem; line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 68rem; margin: 0 auto; padding: 2rem 1.25rem 3rem;
+    display: grid; gap: 2rem;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "head" "form" "stage" "hist";
+  }
+  @media (min-width: 52rem) {
+    .wrap {
+      grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+      grid-template-areas: "head stage" "form stage" "hist stage";
+      grid-template-rows: auto auto 1fr;
+      column-gap: 3rem; padding-top: 3rem;
+    }
+  }
+  header { grid-area: head; }
+  h1 { font-size: 1.75rem; font-weight: 900; line-height: 1.3; margin: 0 0 .25rem; letter-spacing: .01em; }
+  header p { margin: 0; color: var(--muted); max-width: 34em; }
+
+  .form { grid-area: form; }
+  label.field { display: block; font-weight: 700; margin-bottom: .4rem; }
+  textarea {
+    display: block; width: 100%; min-height: 6.5rem; resize: vertical;
+    padding: .8rem .9rem; border: 1.5px solid var(--line); border-radius: .6rem;
+    background: var(--surface); color: var(--ink);
+    font: inherit; line-height: 1.6;
+  }
+  textarea:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-top: .8rem; }
+  .hint { color: var(--muted); font-size: .85rem; }
+  button { font: inherit; cursor: pointer; border: 0; color: inherit; background: none; }
+  .btn {
+    padding: .7rem 1.3rem; border-radius: .6rem; font-weight: 700;
+    background: var(--accent); color: var(--accent-ink);
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }
+  .btn.ghost { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .btn.ghost:hover { background: var(--accent-soft); filter: none; }
+  .msg { min-height: 1.7em; margin: .6rem 0 0; font-size: .9rem; color: var(--muted); }
+  .msg.err { color: var(--danger); }
+
+  .stage {
+    grid-area: stage; align-self: start;
+    background: var(--stage); border-radius: 1.25rem; padding: clamp(1rem, 4vw, 2rem);
+  }
+  @media (min-width: 52rem) { .stage { position: sticky; top: calc(1.5rem + env(safe-area-inset-top, 0px)); } }
+  .plate {
+    position: relative; background: #FFFFFF; border-radius: .5rem;
+    aspect-ratio: 1 / 1; width: 100%; max-width: 32rem; margin: 0 auto;
+    display: grid; place-items: center; overflow: hidden;
+  }
+  .plate canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+  .plate .empty { position: absolute; inset: 0; display: grid; place-items: center; padding: 2rem; text-align: center; color: #5F6875; }
+  .plate.has-qr .empty { display: none; }
+  .plate:not(.has-qr) canvas { visibility: hidden; }
+  .now {
+    margin: 1rem auto 0; max-width: 32rem; font-size: .95rem; color: var(--ink);
+    overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .stage .row { max-width: 32rem; margin: 1rem auto 0; }
+
+  .hist { grid-area: hist; min-width: 0; }
+  .hist-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; border-bottom: 1.5px solid var(--line); padding-bottom: .4rem; }
+  h2 { font-size: 1.1rem; font-weight: 700; margin: 0; }
+  .link { color: var(--muted); font-size: .85rem; text-decoration: underline; text-underline-offset: .2em; padding: .2rem; }
+  .link:hover { color: var(--danger); }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: flex; align-items: stretch; border-bottom: 1px solid var(--line); }
+  .item {
+    flex: 1; min-width: 0; text-align: left; padding: .7rem .6rem .7rem .8rem;
+    border-left: 4px solid transparent;
+  }
+  .item:hover { background: var(--accent-soft); }
+  li.active .item { border-left-color: var(--accent); }
+  .item .t {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    overflow-wrap: anywhere; line-height: 1.5;
+  }
+  .item time { display: block; font-size: .8rem; color: var(--muted); margin-top: .1rem; }
+  .del { flex: none; width: 2.75rem; color: var(--muted); font-size: 1.2rem; line-height: 1; }
+  .del:hover { color: var(--danger); }
+  .hist-empty { color: var(--muted); padding: 1rem 0; margin: 0; }
+
+  .feed { position: absolute; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>最前面QR</h1>
+    <p>QRコードを作って、スライドや他のアプリの上に小窓で出しっぱなしにできます。</p>
+  </header>
+
+  <section class="form" aria-label="QRコードを作る">
+    <label class="field" for="text">QRコードにするテキスト</label>
+    <textarea id="text" placeholder="https://example.com/slides" spellcheck="false" autocomplete="off"></textarea>
+    <div class="row">
+      <button class="btn" id="make" type="button">QRコードを作る</button>
+      <button class="btn ghost" id="pip" type="button">生成して最前面に表示</button>
+      <span class="hint">Ctrl / ⌘ + Enter でも作れます</span>
+    </div>
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="stage" aria-label="QRコード">
+    <div class="plate" id="plate">
+      <canvas id="qr" width="1024" height="1024" role="img" aria-label="QRコード"></canvas>
+      <p class="empty">テキストを入れて「QRコードを作る」を押すと、ここに表示されます。</p>
+    </div>
+    <p class="now" id="now"></p>
+    <div class="row">
+      <span class="hint" id="pipHint"></span>
+      <button class="link" id="pipClose" type="button" hidden>小窓を閉じる</button>
+    </div>
+  </section>
+
+  <section class="hist" aria-label="履歴">
+    <div class="hist-head">
+      <h2>履歴</h2>
+      <button class="link" id="clear" type="button" hidden>すべて消す</button>
+    </div>
+    <ul id="list"></ul>
+    <p class="hist-empty" id="histEmpty">作ったQRコードはこのブラウザに保存され、1クリックで呼び戻せます。</p>
+  </section>
+</div>
+
+<canvas class="feed" id="feed" width="720" height="720" aria-hidden="true"></canvas>
+<video class="feed" id="video" muted playsinline aria-hidden="true"></video>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  var KEY = 'qr-pip:history:v1', MAX = 50;
+  var $ = function (id) { return document.getElementById(id); };
+  var elText = $('text'), elMake = $('make'), elMsg = $('msg'), elPlate = $('plate'),
+      elQR = $('qr'), elNow = $('now'), elPip = $('pip'), elPipHint = $('pipHint'), elPipClose = $('pipClose'),
+      elList = $('list'), elClear = $('clear'), elHistEmpty = $('histEmpty'),
+      elFeed = $('feed'), elVideo = $('video');
+
+  var current = null;      // { text, qr }
+  var pipWin = null;       // Document PiP のウィンドウ
+  var pipCanvas = null;
+  var tick = null;
+  var history = loadHistory();
+
+  /* ---------- 保存 ---------- */
+  function loadHistory() {
+    try {
+      var v = JSON.parse(localStorage.getItem(KEY) || '[]');
+      return Array.isArray(v) ? v.filter(function (x) { return x && typeof x.text === 'string'; }) : [];
+    } catch (e) { return []; }
+  }
+  function saveHistory() {
+    try { localStorage.setItem(KEY, JSON.stringify(history)); return true; }
+    catch (e) { return false; }
+  }
+
+  /* ---------- QR ---------- */
+  function buildQR(text) {
+    qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+    var q = qrcode(0, 'M');
+    q.addData(text, 'Byte');
+    q.make();
+    return q;
+  }
+  function paint(canvas, q) {
+    var ctx = canvas.getContext('2d'), size = canvas.width;
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+    if (!q) return;
+    var n = q.getModuleCount(), total = n + 8;           // 余白 4 セル × 2
+    var cell = Math.max(1, Math.floor(size / total));
+    var off = Math.floor((size - cell * n) / 2);
+    ctx.fillStyle = '#000';
+    for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) {
+      if (q.isDark(r, c)) ctx.fillRect(off + c * cell, off + r * cell, cell, cell);
+    }
+  }
+  function say(text, isErr) {
+    elMsg.textContent = text || '';
+    elMsg.classList.toggle('err', !!isErr);
+  }
+
+  function show(text, opts) {
+    var q;
+    if (typeof qrcode === 'undefined') { say('QRコードの部品を読み込めませんでした。ネット接続を確認して再読み込みしてください。', true); return false; }
+    try { q = buildQR(text); }
+    catch (e) { say('テキストが長すぎてQRコードにできません。短くしてください。', true); return false; }
+    current = { text: text, qr: q };
+    paint(elQR, q);
+    elPlate.classList.add('has-qr');
+    elQR.setAttribute('aria-label', 'QRコード: ' + text);
+    elNow.textContent = text;
+    syncPip();
+    if (canVideoPip && !canDocPip) warmVideo();
+    if (!opts || opts.record !== false) {
+      history = history.filter(function (h) { return h.text !== text; });
+      history.unshift({ text: text, ts: Date.now() });
+      if (history.length > MAX) history.length = MAX;
+      var ok = saveHistory();
+      say(ok ? 'QRコードを作りました。' : 'QRコードを作りました(このブラウザでは履歴を保存できません)。', false);
+    }
+    renderHistory();
+    return true;
+  }
+
+  /* ---------- 履歴 ---------- */
+  function fmt(ts) {
+    try { return new Date(ts).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { return ''; }
+  }
+  function renderHistory() {
+    elList.textContent = '';
+    history.forEach(function (h) {
+      var li = document.createElement('li');
+      if (current && current.text === h.text) li.className = 'active';
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'item'; b.title = 'このQRコードを表示する';
+      var t = document.createElement('span'); t.className = 't'; t.textContent = h.text;
+      var tm = document.createElement('time'); tm.textContent = fmt(h.ts);
+      b.appendChild(t); b.appendChild(tm);
+      b.addEventListener('click', function () {
+        elText.value = h.text;
+        if (show(h.text, { record: false })) say('履歴からQRコードを表示しました。');
+      });
+      var d = document.createElement('button');
+      d.type = 'button'; d.className = 'del'; d.textContent = '×';
+      d.setAttribute('aria-label', '履歴から消す: ' + h.text.slice(0, 40));
+      d.addEventListener('click', function () {
+        history = history.filter(function (x) { return x !== h; });
+        saveHistory(); renderHistory();
+      });
+      li.appendChild(b); li.appendChild(d);
+      elList.appendChild(li);
+    });
+    elClear.hidden = history.length === 0;
+    elHistEmpty.hidden = history.length !== 0;
+  }
+
+  /* ---------- 最前面表示(ピクチャーインピクチャー) ---------- */
+  var isTop = false;
+  try { isTop = window.top === window.self; } catch (e) { isTop = false; }
+  var canDocPip = isTop && 'documentPictureInPicture' in window;
+  var canVideoPip = !!document.pictureInPictureEnabled && typeof elFeed.captureStream === 'function' &&
+                    typeof elVideo.requestPictureInPicture === 'function';
+
+  function pipOpen() { return !!pipWin || document.pictureInPictureElement === elVideo; }
+  function reflectPip() {
+    var open = pipOpen();
+    elPipClose.hidden = !open;
+    elPipHint.textContent = open ? '小窓に表示中。別のQRコードに切り替えると小窓も変わります。' : baseHint;
+  }
+  function syncPip() {
+    if (!current) return;
+    if (pipCanvas) paint(pipCanvas, current.qr);
+    paint(elFeed, current.qr);
+  }
+
+  // 動画方式: canvas を映像にして <video> を PiP にする
+  function warmVideo() {
+    if (!elVideo.srcObject) elVideo.srcObject = elFeed.captureStream();
+    paint(elFeed, current ? current.qr : null);
+    if (!tick) tick = setInterval(function () {            // 静止画だとフレームが流れないので軽く更新
+      var ctx = elFeed.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 1, 1);
+    }, 500);
+    var p = elVideo.paused ? elVideo.play() : Promise.resolve();
+    return Promise.resolve(p).catch(function () {}).then(function () {
+      if (elVideo.readyState >= 1) return;
+      return new Promise(function (res) { elVideo.addEventListener('loadedmetadata', res, { once: true }); });
+    });
+  }
+  function openVideoPip() {
+    if (elVideo.srcObject && elVideo.readyState >= 1 && !elVideo.paused) return elVideo.requestPictureInPicture();
+    return warmVideo().then(function () { return elVideo.requestPictureInPicture(); });
+  }
+
+  // ウィンドウ方式(Chrome / Edge): サイズを自由に変えられる小窓
+  function openDocPip() {
+    return window.documentPictureInPicture.requestWindow({ width: 380, height: 380 }).then(function (w) {
+      pipWin = w;
+      var d = w.document;
+      d.title = 'QRコード';
+      d.body.style.cssText = 'margin:0;height:100vh;background:#fff;display:grid;place-items:center;overflow:hidden';
+      pipCanvas = d.createElement('canvas');
+      pipCanvas.width = pipCanvas.height = 1024;
+      pipCanvas.style.cssText = 'width:100vmin;height:100vmin;display:block;image-rendering:pixelated';
+      d.body.appendChild(pipCanvas);
+      paint(pipCanvas, current.qr);
+      w.addEventListener('pagehide', function () { pipWin = null; pipCanvas = null; reflectPip(); });
+    });
+  }
+
+  function closePip() {
+    if (pipWin) pipWin.close();
+    else if (document.exitPictureInPicture) document.exitPictureInPicture().catch(function () {});
+  }
+  // 入力中のテキストからQRコードを作り直し、それを小窓に出す
+  function makeAndPip() {
+    if (!submit()) return;
+    if (pipOpen()) { say('QRコードを作り、小窓を更新しました。'); return; }
+    var p = canDocPip
+      ? openDocPip().catch(function (e) { if (canVideoPip) return openVideoPip(); throw e; })
+      : openVideoPip();
+    p.then(function () { reflectPip(); say('QRコードを作り、最前面に表示しました。'); }).catch(function () {
+      say('最前面に表示できませんでした。ブラウザの設定でピクチャーインピクチャーが止められていないか確認してください。', true);
+      reflectPip();
+    });
+  }
+  elVideo.addEventListener('enterpictureinpicture', reflectPip);
+  elVideo.addEventListener('leavepictureinpicture', function () {
+    reflectPip();
+    if (elVideo.paused) elVideo.play().catch(function () {});
+  });
+
+  var baseHint = (canDocPip || canVideoPip)
+    ? '「生成して最前面に表示」で、ほかのアプリの上に小窓で出せます。'
+    : 'このブラウザは小窓表示に対応していません。Chrome・Edge・Safari で開いてください。';
+
+  /* ---------- 操作 ---------- */
+  function submit() {
+    var text = elText.value;
+    if (!text.trim()) { say('テキストを入力してください。', true); elText.focus(); return false; }
+    return show(text);
+  }
+  elMake.addEventListener('click', submit);
+  elText.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); submit(); }
+  });
+  elPip.addEventListener('click', makeAndPip);
+  elPipClose.addEventListener('click', closePip);
+  var armed = null;
+  function disarm() { clearTimeout(armed); armed = null; elClear.textContent = 'すべて消す'; }
+  elClear.addEventListener('click', function () {
+    if (!armed) {                              // 1回目: 確認、2回目: 実行
+      elClear.textContent = 'もう一度押すと全部消えます';
+      armed = setTimeout(disarm, 4000);
+      return;
+    }
+    disarm();
+    history = []; saveHistory(); renderHistory(); say('履歴をすべて消しました。');
+  });
+
+  /* ---------- 起動 ---------- */
+  paint(elQR, null);
+  elPip.disabled = !(canDocPip || canVideoPip);
+  if (canVideoPip && !canDocPip) warmVideo();   // 先に映像を温めておくと、クリック直後に小窓を開ける
+  reflectPip();
+  renderHistory();
+  if (history.length) {                       // 前回の続きから
+    elText.value = history[0].text;
+    show(history[0].text, { record: false });
+  }
+})();
+</script>
+</body>
+</html>
