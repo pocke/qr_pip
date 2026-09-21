@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>最前面QR</title>
+<title>QR on Top</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
@@ -132,40 +132,40 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>最前面QR</h1>
-    <p>QRコードを作って、スライドや他のアプリの上に小窓で出しっぱなしにできます。</p>
+    <h1>QR on Top</h1>
+    <p>Make a QR code and keep it floating above your slides or any other app.</p>
   </header>
 
-  <section class="form" aria-label="QRコードを作る">
-    <label class="field" for="text">QRコードにするテキスト</label>
+  <section class="form" aria-label="Make a QR code">
+    <label class="field" for="text">Text to encode</label>
     <textarea id="text" placeholder="https://example.com/slides" spellcheck="false" autocomplete="off"></textarea>
     <div class="row">
-      <button class="btn" id="make" type="button">QRコードを作る</button>
-      <button class="btn ghost" id="pip" type="button">生成して最前面に表示</button>
-      <span class="hint">Ctrl / ⌘ + Enter でも作れます</span>
+      <button class="btn" id="make" type="button">Make QR code</button>
+      <button class="btn ghost" id="pip" type="button">Make and show on top</button>
+      <span class="hint">or press Ctrl / ⌘ + Enter</span>
     </div>
     <p class="msg" id="msg" role="status" aria-live="polite"></p>
   </section>
 
-  <section class="stage" aria-label="QRコード">
+  <section class="stage" aria-label="QR code">
     <div class="plate" id="plate">
-      <canvas id="qr" width="1024" height="1024" role="img" aria-label="QRコード"></canvas>
-      <p class="empty">テキストを入れて「QRコードを作る」を押すと、ここに表示されます。</p>
+      <canvas id="qr" width="1024" height="1024" role="img" aria-label="QR code"></canvas>
+      <p class="empty">Enter some text and press “Make QR code”. It will appear here.</p>
     </div>
     <p class="now" id="now"></p>
     <div class="row">
       <span class="hint" id="pipHint"></span>
-      <button class="link" id="pipClose" type="button" hidden>小窓を閉じる</button>
+      <button class="link" id="pipClose" type="button" hidden>Close floating window</button>
     </div>
   </section>
 
-  <section class="hist" aria-label="履歴">
+  <section class="hist" aria-label="History">
     <div class="hist-head">
-      <h2>履歴</h2>
-      <button class="link" id="clear" type="button" hidden>すべて消す</button>
+      <h2>History</h2>
+      <button class="link" id="clear" type="button" hidden>Clear all</button>
     </div>
     <ul id="list"></ul>
-    <p class="hist-empty" id="histEmpty">作ったQRコードはこのブラウザに保存され、1クリックで呼び戻せます。</p>
+    <p class="hist-empty" id="histEmpty">QR codes you make are saved in this browser. Click one to bring it back.</p>
   </section>
 </div>
 
@@ -184,12 +184,12 @@
       elFeed = $('feed'), elVideo = $('video');
 
   var current = null;      // { text, qr }
-  var pipWin = null;       // Document PiP のウィンドウ
+  var pipWin = null;       // Document PiP window
   var pipCanvas = null;
   var tick = null;
   var history = loadHistory();
 
-  /* ---------- 保存 ---------- */
+  /* ---------- storage ---------- */
   function loadHistory() {
     try {
       var v = JSON.parse(localStorage.getItem(KEY) || '[]');
@@ -213,7 +213,7 @@
     var ctx = canvas.getContext('2d'), size = canvas.width;
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
     if (!q) return;
-    var n = q.getModuleCount(), total = n + 8;           // 余白 4 セル × 2
+    var n = q.getModuleCount(), total = n + 8;           // quiet zone: 4 cells on each side
     var cell = Math.max(1, Math.floor(size / total));
     var off = Math.floor((size - cell * n) / 2);
     ctx.fillStyle = '#000';
@@ -228,13 +228,13 @@
 
   function show(text, opts) {
     var q;
-    if (typeof qrcode === 'undefined') { say('QRコードの部品を読み込めませんでした。ネット接続を確認して再読み込みしてください。', true); return false; }
+    if (typeof qrcode === 'undefined') { say('Could not load the QR code library. Check your connection and reload the page.', true); return false; }
     try { q = buildQR(text); }
-    catch (e) { say('テキストが長すぎてQRコードにできません。短くしてください。', true); return false; }
+    catch (e) { say('This text is too long for a QR code. Shorten it and try again.', true); return false; }
     current = { text: text, qr: q };
     paint(elQR, q);
     elPlate.classList.add('has-qr');
-    elQR.setAttribute('aria-label', 'QRコード: ' + text);
+    elQR.setAttribute('aria-label', 'QR code: ' + text);
     elNow.textContent = text;
     syncPip();
     if (canVideoPip && !canDocPip) warmVideo();
@@ -243,15 +243,15 @@
       history.unshift({ text: text, ts: Date.now() });
       if (history.length > MAX) history.length = MAX;
       var ok = saveHistory();
-      say(ok ? 'QRコードを作りました。' : 'QRコードを作りました(このブラウザでは履歴を保存できません)。', false);
+      say(ok ? 'QR code made.' : 'QR code made. History can\'t be saved in this browser.', false);
     }
     renderHistory();
     return true;
   }
 
-  /* ---------- 履歴 ---------- */
+  /* ---------- history ---------- */
   function fmt(ts) {
-    try { return new Date(ts).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+    try { return new Date(ts).toLocaleString(undefined, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
     catch (e) { return ''; }
   }
   function renderHistory() {
@@ -260,17 +260,17 @@
       var li = document.createElement('li');
       if (current && current.text === h.text) li.className = 'active';
       var b = document.createElement('button');
-      b.type = 'button'; b.className = 'item'; b.title = 'このQRコードを表示する';
+      b.type = 'button'; b.className = 'item'; b.title = 'Show this QR code';
       var t = document.createElement('span'); t.className = 't'; t.textContent = h.text;
       var tm = document.createElement('time'); tm.textContent = fmt(h.ts);
       b.appendChild(t); b.appendChild(tm);
       b.addEventListener('click', function () {
         elText.value = h.text;
-        if (show(h.text, { record: false })) say('履歴からQRコードを表示しました。');
+        if (show(h.text, { record: false })) say('QR code restored from history.');
       });
       var d = document.createElement('button');
       d.type = 'button'; d.className = 'del'; d.textContent = '×';
-      d.setAttribute('aria-label', '履歴から消す: ' + h.text.slice(0, 40));
+      d.setAttribute('aria-label', 'Remove from history: ' + h.text.slice(0, 40));
       d.addEventListener('click', function () {
         history = history.filter(function (x) { return x !== h; });
         saveHistory(); renderHistory();
@@ -282,7 +282,7 @@
     elHistEmpty.hidden = history.length !== 0;
   }
 
-  /* ---------- 最前面表示(ピクチャーインピクチャー) ---------- */
+  /* ---------- always on top (Picture-in-Picture) ---------- */
   var isTop = false;
   try { isTop = window.top === window.self; } catch (e) { isTop = false; }
   var canDocPip = isTop && 'documentPictureInPicture' in window;
@@ -293,7 +293,7 @@
   function reflectPip() {
     var open = pipOpen();
     elPipClose.hidden = !open;
-    elPipHint.textContent = open ? '小窓に表示中。別のQRコードに切り替えると小窓も変わります。' : baseHint;
+    elPipHint.textContent = open ? 'Showing on top. Switching to another QR code updates the floating window too.' : baseHint;
   }
   function syncPip() {
     if (!current) return;
@@ -301,11 +301,11 @@
     paint(elFeed, current.qr);
   }
 
-  // 動画方式: canvas を映像にして <video> を PiP にする
+  // Video path: stream the canvas into a <video> and put that in PiP
   function warmVideo() {
     if (!elVideo.srcObject) elVideo.srcObject = elFeed.captureStream();
     paint(elFeed, current ? current.qr : null);
-    if (!tick) tick = setInterval(function () {            // 静止画だとフレームが流れないので軽く更新
+    if (!tick) tick = setInterval(function () {            // a static canvas emits no frames, so nudge it
       var ctx = elFeed.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 1, 1);
     }, 500);
     var p = elVideo.paused ? elVideo.play() : Promise.resolve();
@@ -319,12 +319,12 @@
     return warmVideo().then(function () { return elVideo.requestPictureInPicture(); });
   }
 
-  // ウィンドウ方式(Chrome / Edge): サイズを自由に変えられる小窓
+  // Window path (Chrome / Edge): a freely resizable floating window
   function openDocPip() {
     return window.documentPictureInPicture.requestWindow({ width: 380, height: 380 }).then(function (w) {
       pipWin = w;
       var d = w.document;
-      d.title = 'QRコード';
+      d.title = 'QR code';
       d.body.style.cssText = 'margin:0;height:100vh;background:#fff;display:grid;place-items:center;overflow:hidden';
       pipCanvas = d.createElement('canvas');
       pipCanvas.width = pipCanvas.height = 1024;
@@ -339,15 +339,15 @@
     if (pipWin) pipWin.close();
     else if (document.exitPictureInPicture) document.exitPictureInPicture().catch(function () {});
   }
-  // 入力中のテキストからQRコードを作り直し、それを小窓に出す
+  // Rebuild the QR code from the current input, then show it on top
   function makeAndPip() {
     if (!submit()) return;
-    if (pipOpen()) { say('QRコードを作り、小窓を更新しました。'); return; }
+    if (pipOpen()) { say('QR code made. Floating window updated.'); return; }
     var p = canDocPip
       ? openDocPip().catch(function (e) { if (canVideoPip) return openVideoPip(); throw e; })
       : openVideoPip();
-    p.then(function () { reflectPip(); say('QRコードを作り、最前面に表示しました。'); }).catch(function () {
-      say('最前面に表示できませんでした。ブラウザの設定でピクチャーインピクチャーが止められていないか確認してください。', true);
+    p.then(function () { reflectPip(); say('QR code made and shown on top.'); }).catch(function () {
+      say('Could not show on top. Check that Picture-in-Picture isn\'t blocked in your browser settings.', true);
       reflectPip();
     });
   }
@@ -358,13 +358,13 @@
   });
 
   var baseHint = (canDocPip || canVideoPip)
-    ? '「生成して最前面に表示」で、ほかのアプリの上に小窓で出せます。'
-    : 'このブラウザは小窓表示に対応していません。Chrome・Edge・Safari で開いてください。';
+    ? '“Make and show on top” floats the QR code above your other apps.'
+    : 'This browser can\'t show a floating window. Open this page in Chrome, Edge, or Safari.';
 
-  /* ---------- 操作 ---------- */
+  /* ---------- actions ---------- */
   function submit() {
     var text = elText.value;
-    if (!text.trim()) { say('テキストを入力してください。', true); elText.focus(); return false; }
+    if (!text.trim()) { say('Enter some text first.', true); elText.focus(); return false; }
     return show(text);
   }
   elMake.addEventListener('click', submit);
@@ -374,24 +374,24 @@
   elPip.addEventListener('click', makeAndPip);
   elPipClose.addEventListener('click', closePip);
   var armed = null;
-  function disarm() { clearTimeout(armed); armed = null; elClear.textContent = 'すべて消す'; }
+  function disarm() { clearTimeout(armed); armed = null; elClear.textContent = 'Clear all'; }
   elClear.addEventListener('click', function () {
-    if (!armed) {                              // 1回目: 確認、2回目: 実行
-      elClear.textContent = 'もう一度押すと全部消えます';
+    if (!armed) {                              // first click arms, second click clears
+      elClear.textContent = 'Click again to clear everything';
       armed = setTimeout(disarm, 4000);
       return;
     }
     disarm();
-    history = []; saveHistory(); renderHistory(); say('履歴をすべて消しました。');
+    history = []; saveHistory(); renderHistory(); say('History cleared.');
   });
 
-  /* ---------- 起動 ---------- */
+  /* ---------- startup ---------- */
   paint(elQR, null);
   elPip.disabled = !(canDocPip || canVideoPip);
-  if (canVideoPip && !canDocPip) warmVideo();   // 先に映像を温めておくと、クリック直後に小窓を開ける
+  if (canVideoPip && !canDocPip) warmVideo();   // warm the stream up front so PiP can open right on click
   reflectPip();
   renderHistory();
-  if (history.length) {                       // 前回の続きから
+  if (history.length) {                       // pick up where you left off
     elText.value = history[0].text;
     show(history[0].text, { record: false });
   }
